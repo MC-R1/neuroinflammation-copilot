@@ -603,22 +603,86 @@
     return c.card;
   }
 
-  function wearCard(p) {
-    var w = p.timeline.wearable;
-    if (!w || !w.length) return null;
-    var c = card("Biomarcatori digitali · wearable", "watch", "monitoraggio passivo · ultime 26 settimane");
-    var grid = el("div", { class: "wgrid" });
-    [
-      { key: "steps", name: "Passi / giorno", worseUp: false, eps: 300, dec: 0, coh: true },
-      { key: "gait", name: "Cammino", unit: "m/s", worseUp: false, eps: 0.04, dec: 2 },
-      { key: "sleep", name: "Sonno", unit: "h", worseUp: false, eps: 0.3, dec: 1 },
-    ].forEach(function (cfg) {
-      var series = w.map(function (x) {
-        return { date: x.date, value: cfg.key === "steps" ? x.steps : (cfg.key === "gait" ? x.gait_speed_ms : x.sleep_hours) };
+  function dbioSpark(vals, col) {
+    var w = 120, h = 34, pad = 4;
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    if (max - min < 1e-9) max = min + 1;
+    function x(i) { return pad + (w - 2 * pad) * (vals.length === 1 ? 0.5 : i / (vals.length - 1)); }
+    function y(v) { return h - pad - (h - 2 * pad) * (v - min) / (max - min); }
+    var pts = vals.map(function (v, i) { return x(i).toFixed(1) + "," + y(v).toFixed(1); }).join(" ");
+    return '<svg viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="none" aria-hidden="true">' +
+      '<polyline fill="none" stroke="' + col + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="' +
+      pts + '" vector-effect="non-scaling-stroke"/><circle cx="' + x(vals.length - 1).toFixed(1) + '" cy="' +
+      y(vals[vals.length - 1]).toFixed(1) + '" r="2.6" fill="' + col + '"/></svg>';
+  }
+
+  function dbioTile(m) {
+    var d = m.latest - m.baseline;
+    var worsening = Math.abs(d) > 1e-9 && ((d > 0) === m.worse_up);
+    var improving = Math.abs(d) > 1e-9 && !worsening;
+    var cls = worsening ? "bad" : (improving ? "good" : "flat");
+    var col = worsening ? "var(--hi)" : (improving ? "var(--lo)" : "var(--mut2)");
+    var arrow = Math.abs(d) < 1e-9 ? "→" : (d > 0 ? "↑" : "↓");
+    var intD = (m.latest % 1 === 0 && m.baseline % 1 === 0);
+    var dShow = intD ? Math.round(d) : Math.round(d * 100) / 100;
+    var tile = el("div", { class: "dbio-tile" });
+    tile.appendChild(el("div", { class: "dbio-t-label" }, [m.label + (m.proprietary ? " ⌁" : "")]));
+    tile.appendChild(el("div", { class: "dbio-t-row" }, [
+      el("span", { class: "dbio-t-val", html: m.latest + ' <span class="u">' + esc(m.unit) + "</span>" }),
+      el("span", { class: "dbio-t-delta " + cls }, [arrow + " " + (dShow >= 0 ? "+" : "") + dShow]),
+    ]));
+    tile.appendChild(el("div", { class: "dbio-t-spark", html: dbioSpark(m.series.map(function (x) { return x.value; }), col) }));
+    return tile;
+  }
+
+  function dbioCard(p) {
+    var dbio = p.timeline.digital_biomarkers;
+    if (!dbio || !dbio.length) return null;
+    var meta = (DATA.meta && DATA.meta.digital_biomarkers) || {};
+    var c = card("Biomarcatori digitali", "watch", "wearable & sensori · raggruppati per dominio");
+
+    c.body.appendChild(el("div", { class: "dbio-legend", html:
+      '<span class="dbio-ev evidence">evidenza</span> associazioni SM supportate · ' +
+      '<span class="dbio-ev rationale">razionale</span> rilevante ma da validare · ' +
+      '<span class="dbio-prop">⌁</span> indice proprietario' }));
+
+    dbio.forEach(function (dom) {
+      var open = dom.key === "gait" || dom.key === "keystroke";
+      var worse = dom.metrics.filter(function (m) {
+        var d = m.latest - m.baseline; return Math.abs(d) > 1e-9 && ((d > 0) === m.worse_up);
+      }).length;
+      var sec = el("div", { class: "dbio-dom" });
+      var head = el("button", { class: "dbio-head", "aria-expanded": String(open) });
+      head.appendChild(el("div", { class: "dbio-h-main" }, [
+        el("div", { class: "dbio-h-top" }, [
+          el("span", { class: "dbio-h-label" }, [dom.label]),
+          el("span", { class: "dbio-ev " + dom.evidence }, [dom.evidence === "evidence" ? "evidenza" : "razionale"]),
+        ]),
+        el("div", { class: "dbio-h-sub" }, [dom.device + " · " + dom.metrics.length + " metriche" +
+          (worse ? " · " + worse + " in peggioramento" : "")]),
+      ]));
+      head.appendChild(el("span", { class: "dbio-chev" + (open ? " open" : ""), html: icHtml("chev") }));
+      sec.appendChild(head);
+      var body = el("div", { class: "dbio-body" + (open ? " open" : "") });
+      var grid = el("div", { class: "dbio-grid" });
+      dom.metrics.forEach(function (m) { grid.appendChild(dbioTile(m)); });
+      body.appendChild(grid);
+      sec.appendChild(body);
+      head.addEventListener("click", function () {
+        var isOpen = body.classList.toggle("open");
+        head.querySelector(".dbio-chev").classList.toggle("open", isOpen);
+        head.setAttribute("aria-expanded", String(isOpen));
       });
-      grid.appendChild(t2card(cfg, p, series));
+      c.body.appendChild(sec);
     });
-    c.body.appendChild(grid);
+
+    var notes = [];
+    if (meta.gait_aggregation) notes.push(meta.gait_aggregation);
+    if (meta.physiologic_note) notes.push(meta.physiologic_note);
+    if (meta.proprietary_note) notes.push("⌁ " + meta.proprietary_note);
+    if (notes.length) {
+      c.body.appendChild(el("div", { class: "dbio-foot" }, ["Metodo: " + notes.join(" ")]));
+    }
     return c.card;
   }
 
@@ -833,7 +897,7 @@
     var main = el("div", { class: "dcol-main" });
     main.appendChild(whyCard(p));
     main.appendChild(trendsCard(p));
-    var wc = wearCard(p); if (wc) main.appendChild(wc);
+    var wc = dbioCard(p); if (wc) main.appendChild(wc);
     main.appendChild(timelineCard(p));
     grid.appendChild(main);
 

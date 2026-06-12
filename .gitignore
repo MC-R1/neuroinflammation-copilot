@@ -11,7 +11,11 @@ __pycache__/
 # Local Claude Code machine state (the shareable agents/ and launch.json ARE kept)
 .claude/settings.local.json
 
-# Source / reference materials (event docs + third-party decks) — inputs, NOT needed to run
-# the prototype. Excluded by default to avoid republishing third-party material.
+# Office temp / lock files
+~$*
+
+# Source / reference materials (event docs + third-party decks + metrics source sheets) — inputs,
+# NOT needed to run the prototype. Excluded by default to avoid republishing third-party material.
 /*.pdf
 /*.docx
+/digital mobility/

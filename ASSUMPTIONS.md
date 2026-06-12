@@ -15,6 +15,11 @@ Tutte rivedibili. **Dati 100% sintetici, prototipo NON clinico.**
   wearable aggregati settimanali. Date ancorate a "oggi" = **2026-06-10** (data dell'evento) e
   rese deterministiche dal seed (nessun uso di orologio di sistema nel generatore).
 - **Seed fisso = 20260611** (data hackathon) per piena riproducibilità.
+- **Biomarcatori digitali** (gait DMO, keystroke, fisiologici, sonno, attività, score compositi): catalogo
+  sintetico con severità per paziente **derivata dalla traiettoria clinica** dell'archetipo; valori e device
+  plausibili ma **dimostrativi**. Distinzione **evidence** (associazioni SM citate: gait/keystroke) vs **rationale**
+  (cardiaco/respiratorio/sonno/attività: rilevante ma **non testato**, da validare); gli score proprietari (Sleep/
+  Stress/Readiness, VO₂max) sono indici non interoperabili. Esposto trasparentemente nell'UI del neurologo.
 - Valori di laboratorio (NfL, GFAP) in **pg/mL**, con soglie **aggiustate per età** plausibili ma
   semplificate (non sostituiscono cut-off di laboratorio validati). NfL "elevato" ~ percentile alto
   per età; GFAP associato a progressione.

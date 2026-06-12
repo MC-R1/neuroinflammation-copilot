@@ -104,13 +104,15 @@ Niente `npm install`, niente build, niente `node_modules`. Solo un browser (e Py
 | Spiegabilità | elenco fattori | **barre di contributo** (punti per flag) + fattori |
 | Trend | sparkline | **area chart** con banda di soglia, tooltip per visita, date |
 | Coorte | — | **percentili di coorte** sui biomarcatori (es. “93° pct coorte” sul NfL) |
+| Biomarcatori digitali | wearable base (passi/cammino/sonno) | **pannello esteso per dominio** (gait DMO, keystroke, fisiologici, sonno, attività, score) con badge **device + evidenza/razionale** e indici proprietari |
 | Governance | modale | **drawer** laterale + toast di conferma firma |
 
 Stessa logica clinica (`js/risk.js` identico), stessi dati, stessi output a 3 livelli.
 
 **App del paziente** — `paziente/` (“L'app di Giulia”): mobile-first, calda e accessibile.
 - **Oggi** (check-in umore/terapia), **Diario** (sintomi/PRO con rilevazione dei segnali da non rimandare),
-  **Assistente** conversazionale **sicuro**, **Andamenti** (trend amichevoli), **Visita** (promemoria auto-generato).
+  **Assistente** conversazionale **sicuro**, **Andamenti** (trend amichevoli + card “Dal tuo dispositivo”
+  con recupero/sonno/battito/minuti attivi), **Visita** (promemoria auto-generato).
 - **Sicurezza dell'assistente** (la giuria la premia): limiti chiari, **escalation-first** (112 / Centro SM / crisi),
   niente diagnosi né modifiche di terapia, niente over-reassurance. Contenuto clinico revisionato dall'agente `clinical-guardian`.
 - **Il loop:** i dati che Giulia registra qui sono quelli che la fanno emergere in cima nel copilot del neurologo.

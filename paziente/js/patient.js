@@ -426,8 +426,53 @@
       msg: function (dir, w) { return w ? "Stai dormendo un po' meno: curare il sonno aiuta anche stanchezza e umore." : "Sonno nella norma. Ottimo."; },
     }));
 
+    // "Dal tuo dispositivo" — friendly consumer-wearable tiles (no clinical/research metrics,
+    // no alarming language: this is the patient's calm view).
+    var dev = deviceCard();
+    if (dev) wrap.appendChild(dev);
+
     wrap.appendChild(el("div", { class: "disc" }, ["Indicatori semplificati a scopo dimostrativo (dati sintetici). Gli esami clinici li segue il tuo Centro SM."]));
     return wrap;
+  }
+
+  function dbioMetric(domKey, metricKey) {
+    var dbio = P().timeline.digital_biomarkers || [];
+    var dom = null; dbio.forEach(function (d) { if (d.key === domKey) dom = d; });
+    if (!dom) return null;
+    var m = null; dom.metrics.forEach(function (x) { if (x.key === metricKey) m = x; });
+    return m;
+  }
+
+  function deviceCard() {
+    var picks = [
+      { dom: "composite", key: "readiness_score", icon: "heart", cls: "green", label: "Recupero", suffix: "" },
+      { dom: "sleep", key: "sleep_score", icon: "moon", cls: "blue", label: "Qualità sonno", suffix: "" },
+      { dom: "cardiac", key: "resting_hr", icon: "bolt", cls: "warm", label: "Battito a riposo", suffix: "" },
+      { dom: "activity", key: "azm", icon: "foot", cls: "green", label: "Minuti attivi", suffix: "" },
+    ];
+    var tiles = picks.map(function (pk) { return { pk: pk, m: dbioMetric(pk.dom, pk.key) }; })
+      .filter(function (t) { return t.m; });
+    if (!tiles.length) return null;
+
+    var card = el("div", { class: "trendc" });
+    card.appendChild(el("div", { class: "tt", style: "margin-bottom:4px" }, [
+      el("span", { class: "tic green", html: icHtml("foot", 18) }),
+      el("span", { class: "tname" }, ["Dal tuo dispositivo"]),
+    ]));
+    card.appendChild(el("div", { class: "tmsg", style: "margin-bottom:10px" },
+      ["Dati dal tuo wearable. Sono indicazioni di benessere — non una diagnosi."]));
+    var grid = el("div", { class: "dev-grid" });
+    tiles.forEach(function (t) {
+      var vals = t.m.series.map(function (x) { return x.value; });
+      var tile = el("div", { class: "dev-tile" });
+      tile.appendChild(el("div", { class: "dev-ic " + t.pk.cls, html: icHtml(t.pk.icon, 17) }));
+      tile.appendChild(el("div", { class: "dev-v" }, [String(t.m.latest) + (t.m.unit === "%" || /\/100/.test(t.m.unit) ? "" : "")]));
+      tile.appendChild(el("div", { class: "dev-l" }, [t.pk.label]));
+      tile.appendChild(el("div", { class: "dev-sp", html: spark(vals, { color: "var(--brand)" }) }));
+      grid.appendChild(tile);
+    });
+    card.appendChild(grid);
+    return card;
   }
 
   // ======================================================================================

@@ -433,6 +433,49 @@ button { font-family: inherit; }
 .t2 svg.achart { display: block; width: 100%; height: 76px; margin: 2px 0 4px; }
 .t2-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 10.3px; color: var(--mut2); }
 
+/* ============================================================ DIGITAL BIOMARKERS == */
+.dbio-legend {
+  font-size: 11px; color: var(--mut); margin-bottom: 12px; line-height: 1.9;
+}
+.dbio-ev {
+  font-size: 9.5px; font-weight: 740; letter-spacing: .4px; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; vertical-align: 1px;
+}
+.dbio-ev.evidence { background: var(--lo-bg); color: var(--lo); border: 1px solid var(--lo-bd); }
+.dbio-ev.rationale { background: var(--md-bg); color: var(--md); border: 1px solid var(--md-bd); }
+.dbio-prop { font-weight: 800; color: var(--c-pro); }
+
+.dbio-dom { border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 9px; overflow: hidden; background: var(--card); }
+.dbio-head {
+  width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+  background: var(--card-2); border: none; padding: 12px 14px; cursor: pointer;
+  transition: background .12s;
+}
+.dbio-head:hover { background: #eef3f8; }
+.dbio-h-main { flex: 1; min-width: 0; }
+.dbio-h-top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.dbio-h-label { font-size: 13.8px; font-weight: 700; }
+.dbio-h-sub { font-size: 11px; color: var(--mut); margin-top: 2px; }
+.dbio-chev { color: var(--mut2); display: inline-flex; transition: transform .18s; }
+.dbio-chev svg { width: 17px; height: 17px; }
+.dbio-chev.open { transform: rotate(90deg); }
+
+.dbio-body { display: none; padding: 4px 14px 14px; }
+.dbio-body.open { display: block; }
+.dbio-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+@media (max-width: 560px) { .dbio-grid { grid-template-columns: 1fr; } }
+.dbio-tile { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 11px; background: var(--card); }
+.dbio-t-label { font-size: 11.5px; color: var(--mut); font-weight: 600; line-height: 1.3; min-height: 30px; }
+.dbio-t-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 2px 0 1px; }
+.dbio-t-val { font-size: 17px; font-weight: 760; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.dbio-t-val .u { font-size: 10px; font-weight: 600; color: var(--mut2); margin-left: 2px; letter-spacing: 0; }
+.dbio-t-delta { font-size: 11px; font-weight: 720; padding: 1px 7px; border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dbio-t-delta.bad { background: var(--hi-bg); color: var(--hi); }
+.dbio-t-delta.good { background: var(--lo-bg); color: var(--lo); }
+.dbio-t-delta.flat { background: #eef2f6; color: var(--mut); }
+.dbio-t-spark svg { display: block; width: 100%; height: 30px; margin-top: 5px; }
+.dbio-foot { font-size: 10.5px; color: var(--mut2); margin-top: 12px; line-height: 1.5; border-top: 1px solid var(--line); padding-top: 10px; }
+
 /* ===================================================================== TIMELINE ==== */
 .tl2 { position: relative; padding-left: 6px; }
 .tl2::before {

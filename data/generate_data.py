@@ -114,6 +114,132 @@ def gfap_url(age):
 
 
 # --------------------------------------------------------------------------------------
+# Digital biomarker catalog (wearable / sensor-derived), grouped by domain.
+# Source: user-provided study biomarker catalog. We preserve the clinical nuances:
+#  - `device`   : measuring device per domain
+#  - `evidence` : "evidence" = cited evidence in MS for that domain; "rationale" = MS-relevant
+#                 rationale only, NOT tested/validated (see Note 5). Shown transparently in the UI.
+#  - per-metric `prop=True` marks proprietary, non-interoperable composite scores (Note 2).
+#  - `sev` maps the domain to a per-patient severity (0..1) derived from the clinical archetype,
+#    so digital biomarkers move CONSISTENTLY with each patient's story (multimodal corroboration).
+# Each metric: key, label, unit, base (healthy value), span (shift at severity=1),
+#              worse_up (True if higher=worse), dec (decimals).
+DBIO_DOMAINS = [
+    dict(key="gait", label="Cammino reale (gait DMO)",
+         device="IMU lombare · Axivity AX6 / MobGap", evidence="evidence", sev="gait", metrics=[
+             dict(key="walking_speed", label="Velocità del cammino", unit="m/s", base=1.30, span=0.34, worse_up=False, dec=2),
+             dict(key="cadence", label="Cadenza", unit="passi/min", base=112, span=16, worse_up=False, dec=0),
+             dict(key="stride_length", label="Lunghezza del passo", unit="m", base=1.38, span=0.26, worse_up=False, dec=2),
+             dict(key="stride_duration", label="Durata del passo", unit="s", base=1.04, span=0.16, worse_up=True, dec=2),
+             dict(key="walking_bouts", label="Episodi di cammino", unit="n/die", base=92, span=34, worse_up=False, dec=0),
+             dict(key="bout_duration", label="Durata episodio", unit="s", base=44, span=14, worse_up=False, dec=0),
+             dict(key="turns", label="Numero di giri (turns)", unit="n/die", base=190, span=70, worse_up=False, dec=0),
+         ]),
+    dict(key="keystroke", label="Digitazione (keystroke dynamics)",
+         device="Tastiera smartphone · Neurokeys / Neurocast", evidence="evidence", sev="keystroke", metrics=[
+             dict(key="hold_time", label="Hold time (HT)", unit="ms", base=96, span=42, worse_up=True, dec=0),
+             dict(key="flight_time", label="Flight time (FT)", unit="ms", base=118, span=55, worse_up=True, dec=0),
+             dict(key="ppl", label="Latenza press-press (PPL)", unit="ms", base=258, span=95, worse_up=True, dec=0),
+             dict(key="rrl", label="Latenza release-release (RRL)", unit="ms", base=262, span=95, worse_up=True, dec=0),
+             dict(key="pre_cs", label="Rallentamento pre-correzione", unit="ms", base=380, span=140, worse_up=True, dec=0),
+             dict(key="correction_dur", label="Durata correzione (backspace)", unit="ms", base=520, span=180, worse_up=True, dec=0),
+             dict(key="post_cs", label="Rallentamento post-correzione", unit="ms", base=360, span=130, worse_up=True, dec=0),
+             dict(key="pre_space_pause", label="Pausa pre-spazio", unit="ms", base=205, span=85, worse_up=True, dec=0),
+             dict(key="post_space_pause", label="Pausa post-spazio", unit="ms", base=195, span=80, worse_up=True, dec=0),
+             dict(key="after_punct_pause", label="Pausa dopo punteggiatura", unit="ms", base=330, span=150, worse_up=True, dec=0),
+             dict(key="prop_long_words", label="Quota parole lunghe (>6)", unit="%", base=19, span=7, worse_up=False, dec=0),
+             dict(key="word_len_var", label="Variabilità lunghezza parole", unit="SD", base=2.5, span=0.8, worse_up=False, dec=1),
+         ]),
+    dict(key="cardiac", label="Cuore & sistema autonomo",
+         device="Wearable consumer · Fitbit / smartwatch / ring", evidence="rationale", sev="cardio", metrics=[
+             dict(key="resting_hr", label="FC a riposo (RHR)", unit="bpm", base=63, span=12, worse_up=True, dec=0),
+             dict(key="hr_24h", label="FC media 24h", unit="bpm", base=73, span=10, worse_up=True, dec=0),
+             dict(key="hrv_rmssd", label="HRV (RMSSD, notturna)", unit="ms", base=44, span=20, worse_up=False, dec=0),
+         ]),
+    dict(key="respthermo", label="Respiro & temperatura (notturni)",
+         device="Wearable consumer · durante il sonno", evidence="rationale", sev="cardio", metrics=[
+             dict(key="breathing_rate", label="Frequenza respiratoria", unit="atti/min", base=15.0, span=2.2, worse_up=True, dec=1),
+             dict(key="spo2", label="SpO₂ (notturna media)", unit="%", base=97, span=2.0, worse_up=False, dec=0),
+             dict(key="skin_temp_delta", label="Variazione temp. cutanea", unit="°C Δ", base=0.0, span=0.7, worse_up=True, dec=1),
+         ]),
+    dict(key="sleep", label="Sonno",
+         device="Wearable consumer · Fitbit / smartwatch / ring", evidence="rationale", sev="sleep", metrics=[
+             dict(key="total_sleep_time", label="Tempo di sonno totale", unit="h", base=7.2, span=1.4, worse_up=False, dec=1),
+             dict(key="deep_sleep", label="Sonno profondo", unit="min", base=78, span=30, worse_up=False, dec=0),
+             dict(key="rem_sleep", label="Sonno REM", unit="min", base=96, span=32, worse_up=False, dec=0),
+             dict(key="awake_time", label="Tempo da sveglia", unit="min", base=34, span=28, worse_up=True, dec=0),
+             dict(key="sleep_efficiency", label="Efficienza del sonno", unit="%", base=89, span=12, worse_up=False, dec=0),
+             dict(key="sleep_score", label="Sleep Score", unit="/100", base=83, span=22, worse_up=False, dec=0, prop=True),
+         ]),
+    dict(key="activity", label="Attività fisica",
+         device="Wearable consumer · Fitbit / smartwatch / ring", evidence="rationale", sev="activity", metrics=[
+             dict(key="steps", label="Passi", unit="n/die", base=7600, span=3600, worse_up=False, dec=0),
+             dict(key="azm", label="Active Zone Minutes", unit="min", base=38, span=26, worse_up=False, dec=0),
+             dict(key="floors", label="Piani saliti", unit="n", base=12, span=8, worse_up=False, dec=0),
+             dict(key="distance", label="Distanza", unit="km", base=5.2, span=2.8, worse_up=False, dec=1),
+             dict(key="calories", label="Calorie", unit="kcal", base=2050, span=350, worse_up=False, dec=0),
+             dict(key="vo2max", label="Cardio Fitness (VO₂max)", unit="mL/kg/min", base=38, span=9, worse_up=False, dec=0, prop=True),
+         ]),
+    dict(key="composite", label="Punteggi compositi",
+         device="Wearable consumer · indici proprietari", evidence="rationale", sev="composite", metrics=[
+             dict(key="stress_score", label="Stress Management Score", unit="/100", base=72, span=26, worse_up=False, dec=0, prop=True),
+             dict(key="readiness_score", label="Readiness Score", unit="/100", base=76, span=28, worse_up=False, dec=0, prop=True),
+         ]),
+]
+
+
+def dbio_series(m, sev, rng, n=8):
+    """Generate a short weekly series for a digital-biomarker metric, moving in the
+    'worse' direction by `sev * span` with a late ramp + small noise.
+    Uses a DEDICATED `rng` (not the global one) so digital-biomarker generation does not
+    perturb the global RNG stream that produces the clinical series (keeps the cohort stable)."""
+    direction = 1.0 if m["worse_up"] else -1.0
+    end = m["base"] + direction * sev * m["span"]
+    raw = late_ramp(m["base"], end, n, knee=0.35)
+    sd = abs(m["span"]) * 0.05   # proportional to the metric's range (clean trend)
+    dec = m["dec"]
+    lo = 0 if m["base"] >= 0 else None
+    hi = None
+    if m["key"] == "spo2":
+        lo, hi = 90, 100
+    elif m["unit"] == "%":
+        lo, hi = 0, 100
+    elif m["key"] in ("sleep_score", "stress_score", "readiness_score"):
+        lo, hi = 0, 100
+    out = []
+    for v in raw:
+        v = v + rng.gauss(0, sd)
+        if lo is not None:
+            v = max(lo, v)
+        if hi is not None:
+            v = min(hi, v)
+        out.append(round(v, dec) if dec else int(round(v)))
+    return out
+
+
+def build_digital_biomarkers(sev_map, weeks_dates, rng):
+    """Assemble the full digital-biomarker structure for one patient (dedicated rng)."""
+    out = []
+    for dom in DBIO_DOMAINS:
+        sev = clamp(sev_map.get(dom["sev"], 0.0), 0.0, 1.0)
+        metrics = []
+        for m in dom["metrics"]:
+            vals = dbio_series(m, sev, rng, n=len(weeks_dates))
+            series = [dict(date=iso(d), value=v) for d, v in zip(weeks_dates, vals)]
+            metrics.append(dict(
+                key=m["key"], label=m["label"], unit=m["unit"],
+                worse_up=m["worse_up"], proprietary=bool(m.get("prop", False)),
+                baseline=series[0]["value"], latest=series[-1]["value"],
+                series=series,
+            ))
+        out.append(dict(
+            key=dom["key"], label=dom["label"], device=dom["device"],
+            evidence=dom["evidence"], metrics=metrics,
+        ))
+    return out
+
+
+# --------------------------------------------------------------------------------------
 # Visit schedule
 # --------------------------------------------------------------------------------------
 def visit_dates(n_visits, last_days_ago=21, interval_days=91):
@@ -709,6 +835,32 @@ def build_patient(spec):
             active_minutes=int(round(steps[i] / 110)),
         ))
 
+    # Digital-biomarker severities (0..1) derived from this patient's clinical trajectory,
+    # so wearable/sensor metrics corroborate the story across independent modalities.
+    def m2(seq):  # baseline (first 2) vs recent (last 2) means
+        b = sum(seq[:2]) / max(1, len(seq[:2]))
+        r = sum(seq[-2:]) / max(1, len(seq[-2:]))
+        return b, r
+    eb, er = m2(edss); sb, sr = m2(sdmt); mb, mr = m2(mfis)
+    stb, str_ = m2(steps); gb, gr = m2(gait); slb, slr = m2(sleep)
+    mfis_rise = clamp((mr - mb) / 40.0, 0, 1)
+    sdmt_drop = clamp((sb - sr) / 15.0, 0, 1)
+    edss_rise = clamp((er - eb) / 2.0, 0, 1)
+    steps_decl = clamp((stb - str_) / 4000.0, 0, 1)
+    gait_decl = clamp((gb - gr) / 0.4, 0, 1)
+    sleep_decl = clamp((slb - slr) / 2.0, 0, 1)
+    sev_map = {
+        "gait": clamp(max(gait_decl, 0.8 * edss_rise), 0, 1),
+        "keystroke": clamp(max(sdmt_drop, 0.5 * mfis_rise), 0, 1),
+        "cardio": clamp(0.8 * mfis_rise, 0, 1),
+        "sleep": clamp(max(sleep_decl, 0.5 * mfis_rise), 0, 1),
+        "activity": clamp(max(steps_decl, 0.6 * mfis_rise), 0, 1),
+    }
+    sev_map["composite"] = clamp((sev_map["cardio"] + sev_map["sleep"] + sev_map["activity"]) / 3.0, 0, 1)
+    # Dedicated, per-patient RNG (stable, independent of the global clinical stream).
+    dbio_rng = random.Random(SEED + int(spec["id"].split("-")[1]) * 1000)
+    timeline["digital_biomarkers"] = build_digital_biomarkers(sev_map, wk, dbio_rng)
+
     # Monitoring items: (label, last_done_days_ago, due_in_days[+future/-overdue], status)
     monitoring = []
     for (label, last_ago, due_in, status) in spec["monitoring"]:
@@ -839,6 +991,19 @@ def emit_csvs(patients):
     write_csv(os.path.join(HERE, "monitoring.csv"),
               ["patient_id", "item", "last_done", "due_date", "status"], rows)
 
+    # digital_biomarkers.csv (long format: patient x domain x metric x week)
+    rows = []
+    for p in patients:
+        for dom in p["timeline"].get("digital_biomarkers", []):
+            for m in dom["metrics"]:
+                for pt in m["series"]:
+                    rows.append([p["id"], pt["date"], dom["key"], dom["label"], m["key"], m["label"],
+                                 pt["value"], m["unit"], int(m["worse_up"]), int(m["proprietary"]),
+                                 dom["evidence"], dom["device"]])
+    write_csv(os.path.join(HERE, "digital_biomarkers.csv"),
+              ["patient_id", "week", "domain", "domain_label", "metric", "metric_label",
+               "value", "unit", "worse_up", "proprietary", "evidence", "device"], rows)
+
 
 # --------------------------------------------------------------------------------------
 # Main
@@ -855,6 +1020,20 @@ def main():
             n_patients=len(patients),
             disclaimer=DISCLAIMER,
             synthetic=True,
+            digital_biomarkers=dict(
+                valid_day_rule="Giorno valido = >=1 h di wear 07:00-23:00 su >=3 giorni.",
+                gait_aggregation=("DMO del cammino calcolati per episodio (bout) e aggregati a sintesi "
+                                  "giornaliere/settimanali (somma, mediana, 90° pct, CV), stratificati per "
+                                  "durata del bout (10-30 s, >=30 s, >=60 s)."),
+                keystroke_aggregation="Feature di digitazione aggregate con statistiche di sintesi e di serie temporale (mediana, max, min, SD).",
+                physiologic_note="HRV, frequenza respiratoria, SpO2 e temperatura cutanea derivate di notte, durante il sonno; HRV = RMSSD (ms).",
+                evidence_legend=dict(
+                    evidence="Associazioni con la SM supportate da evidenza citata (gait, keystroke).",
+                    rationale=("Razionale rilevante per la SM ma NON testato nello studio: cardiaco, "
+                               "respiratorio, sonno, attività. Richiede validazione dedicata."),
+                ),
+                proprietary_note="Sleep/Stress/Readiness Score e Cardio Fitness sono indici compositi proprietari (algoritmo non divulgato), non interoperabili tra brand.",
+            ),
         ),
         patients=patients,
     )

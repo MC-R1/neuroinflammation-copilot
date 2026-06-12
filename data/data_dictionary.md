@@ -17,7 +17,8 @@
 | `mri.csv` | CSV long | Referti RMN sintetici (nuove/ingrandite/captanti/PRL/atrofia) |
 | `relapses.csv` | CSV long | Ricadute e sospette pseudo-ricadute |
 | `dmt.csv` | CSV long | Storia terapeutica (DMT corrente + pregresse) |
-| `wearable.csv` | CSV long | Biomarcatori digitali settimanali (passi, cammino, sonno) |
+| `wearable.csv` | CSV long | Wearable di base settimanale (passi, cammino, sonno) — retro-compatibile |
+| `digital_biomarkers.csv` | CSV long | **Catalogo esteso** di biomarcatori digitali per dominio (gait DMO, keystroke, fisiologici, sonno, attività, score) |
 | `monitoring.csv` | CSV long | Esami di monitoraggio programmati e stato |
 
 I CSV sono in **formato long** (una riga per misura) per essere esplorati facilmente in **R/Quarto**.
@@ -51,7 +52,8 @@ I CSV sono in **formato long** (una riga per misura) per essere esplorati facilm
 | `relapses` | `{date, type, severity, trigger, recovery, note}` | `type` ∈ {`relapse`, `pseudo_relapse_suspected`} |
 | `mri` | `{date, new_t2, enlarging_t2, gad_enhancing, prl, atrophy, note}` | Attività focale e PRL/atrofia |
 | `dmt_changes` | `{date, event, to, klass, note}` | Inizi/sospensioni terapia |
-| `wearable` | `{date, steps, gait_speed_ms, sleep_hours, sleep_efficiency_pct, active_minutes}` | Aggregati settimanali |
+| `wearable` | `{date, steps, gait_speed_ms, sleep_hours, sleep_efficiency_pct, active_minutes}` | Aggregati settimanali (di base) |
+| `digital_biomarkers` | `[{key, label, device, evidence, metrics:[{key,label,unit,worse_up,proprietary,baseline,latest,series}]}]` | Catalogo esteso per dominio (sotto) |
 
 ## Soglie di riferimento (semplificate, per età)
 - **NfL URL** = `7.0 + 0.11 × max(0, età−20)` pg/mL (≈ 7 a 20 anni, ≈ 9.2 a 40, ≈ 12.5 a 70).
@@ -59,6 +61,33 @@ I CSV sono in **formato long** (una riga per misura) per essere esplorati facilm
 
 > Sono valori **dimostrativi** scelti per rendere leggibile la demo; in clinica si usano
 > percentili validati (es. modelli aggiustati per età/BMI) e cut-off di laboratorio.
+
+## Biomarcatori digitali (catalogo esteso, `timeline.digital_biomarkers`)
+Metriche da wearable/sensori, raggruppate per **dominio**, ognuna con device, tag di **evidenza** e
+serie settimanale (8 punti). Le severità per paziente sono **derivate dalla traiettoria clinica**
+dell'archetipo (es. il declino del cammino e il rallentamento della digitazione corroborano EDSS e
+calo cognitivo su modalità indipendenti). Deterministico, niente dati reali.
+
+| Dominio | Device | Evidenza | Esempi di metriche |
+|---|---|---|---|
+| Cammino reale (gait DMO) | IMU lombare · Axivity AX6 / MobGap | **evidence** | velocità, cadenza, lunghezza/durata del passo, episodi, durata episodio, giri (turns) |
+| Digitazione (keystroke) | Tastiera smartphone · Neurokeys / Neurocast | **evidence** | hold/flight time, PPL/RRL, pre/post-correzione, pause, quota parole lunghe |
+| Cuore & autonomo | Wearable consumer | rationale | FC a riposo, FC media 24h, HRV (RMSSD) |
+| Respiro & temperatura (notturni) | Wearable consumer (sonno) | rationale | freq. respiratoria, SpO₂, Δ temp. cutanea |
+| Sonno | Wearable consumer | rationale | TST, sonno profondo/REM/sveglia, efficienza, **Sleep Score** ⌁ |
+| Attività fisica | Wearable consumer | rationale | passi, AZM, piani, distanza, calorie, **VO₂max** ⌁ |
+| Punteggi compositi | Indici proprietari | rationale | **Stress Management** ⌁, **Readiness** ⌁ |
+
+**Note (come nella fonte):**
+1. `evidence` = associazioni con la SM supportate da evidenza citata (gait, keystroke); `rationale` =
+   razionale rilevante ma **NON testato** (cardiaco/respiratorio/sonno/attività): richiede validazione dedicata.
+2. ⌁ = indice **proprietario** (algoritmo non divulgato), non interoperabile tra brand.
+3. Gait DMO calcolati per *bout* e aggregati (somma/mediana/90° pct/CV), stratificati per durata;
+   giorno valido = ≥1 h wear 07:00–23:00 su ≥3 giorni. Fisiologici (HRV/respiro/SpO₂/temp.) derivati di notte.
+
+Queste sfumature sono esposte nell'UpdateView del neurologo (badge evidenza/razionale, device, ⌁) per
+**trasparenza**. L'app paziente mostra solo un sottoinsieme "consumer" (recupero, sonno, battito, minuti attivi),
+in chiave di benessere e senza linguaggio allarmante.
 
 ## Coorte (14 archetipi)
 | ID | Nome | Forma | Archetipo clinico |
